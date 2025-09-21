@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>User Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Roboto', sans-serif;
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: #333;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .dashboard {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+      width: 420px;
+      padding: 30px;
+      text-align: center;
+      animation: fadeIn 0.8s ease-in-out;
+    }
+    .profile-pic {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      border: 4px solid #667eea;
+      object-fit: cover;
+      margin-bottom: 20px;
+    }
+    h1 {
+      font-size: 26px;
+      margin: 10px 0;
+      color: #444;
+    }
+    p {
+      color: #666;
+      margin-bottom: 20px;
+    }
+    .btn {
+      display: inline-block;
+      padding: 12px 24px;
+      background: #667eea;
+      color: #fff;
+      border-radius: 8px;
+      text-decoration: none;
+      transition: background 0.3s;
+    }
+    .btn:hover {
+      background: #4c51bf;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="dashboard">
+    <!-- Profile Picture -->
+    <img src="{{ user_face_url }}" alt="Profile Picture" class="profile-pic" id="profilePic">
+
+    <!-- Greeting -->
+    <h1>Hi, {{ username }} 👋</h1>
+    <p>Welcome to your secure dashboard.</p>
+    
+    <!-- User Info -->
+    <div class="user-info">
+      <p><strong>Email:</strong> {{ email }}</p>
+      <p><strong>Username:</strong> {{ username }}</p>
+      <p><strong>Login Time:</strong> <span id="loginTime"></span></p>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="actions">
+      <a href="/logout" class="btn">Logout</a>
+      <button onclick="refreshProfile()" class="btn" style="background: #28a745; margin-left: 10px;">Refresh Profile</button>
+    </div>
+  </div>
+
+  <script>
+    // Set current login time
+    document.getElementById('loginTime').textContent = new Date().toLocaleString();
+    
+    // Refresh profile function
+    function refreshProfile() {
+      location.reload();
+    }
+  </script>
+
+</body>
+</html>

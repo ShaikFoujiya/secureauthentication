@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Database Management</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            position: relative;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .logout-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 2px solid white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+        
+        .logout-btn:hover {
+            background: white;
+            color: #4CAF50;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            padding: 30px;
+            background: #f8f9fa;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #4CAF50;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            color: #666;
+            font-size: 0.9em;
+        }
+        
+        .data-section {
+            padding: 30px;
+        }
+        
+        .section-title {
+            font-size: 1.8em;
+            color: #333;
+            margin-bottom: 20px;
+            border-bottom: 3px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .data-table th {
+            background: #4CAF50;
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+        
+        .data-table td {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .data-table tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .user-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid #4CAF50;
+        }
+        
+        .status-badge {
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+        
+        .status-active {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status-inactive {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary {
+            background: #007BFF;
+            color: white;
+        }
+        
+        .btn-danger {
+            background: #DC3545;
+            color: white;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 50px;
+            color: #666;
+        }
+        
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        
+        .search-box {
+            margin-bottom: 20px;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            width: 300px;
+            font-size: 16px;
+        }
+        
+        .search-box:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+        
+        .refresh-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-left: 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .refresh-btn:hover {
+            background: #218838;
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <a href="/logout" class="logout-btn">Logout</a>
+            <h1>🔧 Admin Dashboard</h1>
+            <p>Welcome back, {{ username }}! Manage the secure authentication system.</p>
+            
+        </div>
+        
+        <div class="stats" id="stats">
+            <div class="stat-card">
+                <div class="stat-number" id="totalUsers">-</div>
+                <div class="stat-label">Total Users</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="activeUsers">-</div>
+                <div class="stat-label">Active Users</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="totalImages">-</div>
+                <div class="stat-label">Face Images</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="lastUpdate">-</div>
+                <div class="stat-label">Last Update</div>
+            </div>
+        </div>
+        
+        <div class="data-section">
+            <h2 class="section-title">👥 Users Database</h2>
+            <div style="margin-bottom: 20px;">
+                <input type="text" id="searchBox" class="search-box" placeholder="Search users...">
+                <button onclick="loadUsersData()" class="refresh-btn">🔄 Refresh</button>
+            </div>
+            <div id="usersTable">
+                <div class="loading">Loading users data...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let allUsers = [];
+        
+        // Load all data when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            loadUsersData();
+            
+            // Add search functionality
+            document.getElementById('searchBox').addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                const filteredUsers = allUsers.filter(user => 
+                    user.username.toLowerCase().includes(searchTerm) ||
+                    user.email.toLowerCase().includes(searchTerm) ||
+                    user.role.toLowerCase().includes(searchTerm)
+                );
+                displayUsersTable(filteredUsers);
+            });
+        });
+
+        async function loadUsersData() {
+            try {
+                const response = await fetch('/api/users');
+                const data = await response.json();
+                
+                if (data.error) {
+                    document.getElementById('usersTable').innerHTML = 
+                        `<div class="error">Error loading data: ${data.error}</div>`;
+                    return;
+                }
+                
+                allUsers = data.users;
+                displayUsersTable(allUsers);
+                updateStats(allUsers);
+                
+            } catch (error) {
+                document.getElementById('usersTable').innerHTML = 
+                    `<div class="error">Error loading data: ${error.message}</div>`;
+            }
+        }
+
+        function displayUsersTable(users) {
+            if (users.length === 0) {
+                document.getElementById('usersTable').innerHTML = 
+                    '<div class="error">No users found in database</div>';
+                return;
+            }
+
+            let tableHTML = `
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Avatar</th>
+                            <th>Username</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Image Status</th>
+                            <th>Created At</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            users.forEach(user => {
+                const avatarSrc = user.image_exists ? user.image_path : '/static/default-avatar.svg';
+                const statusClass = user.image_exists ? 'status-active' : 'status-inactive';
+                const statusText = user.image_exists ? 'Available' : 'Missing';
+                const roleClass = user.role === 'admin' ? 'status-active' : 'status-inactive';
+                const roleText = user.role === 'admin' ? 'Admin' : 'User';
+                
+                tableHTML += `
+                    <tr>
+                        <td>${user.id}</td>
+                        <td><img src="${avatarSrc}" alt="Avatar" class="user-avatar" onerror="this.src='/static/default-avatar.svg'"></td>
+                        <td><strong>${user.username}</strong></td>
+                        <td>${user.email}</td>
+                        <td><span class="status-badge ${roleClass}">${roleText}</span></td>
+                        <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                        <td>${user.created_at}</td>
+                        <td class="actions">
+                            <button class="btn btn-primary" onclick="viewUser(${user.id})">View</button>
+                            <button class="btn btn-danger" onclick="deleteUser(${user.id}, '${user.username}')" ${user.role === 'admin' ? 'disabled' : ''}>Delete</button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            tableHTML += '</tbody></table>';
+            document.getElementById('usersTable').innerHTML = tableHTML;
+        }
+
+        function updateStats(users) {
+            const totalUsers = users.length;
+            const activeUsers = users.filter(user => user.image_exists).length;
+            const totalImages = users.filter(user => user.image_exists).length;
+            const lastUpdate = new Date().toLocaleString();
+
+            document.getElementById('totalUsers').textContent = totalUsers;
+            document.getElementById('activeUsers').textContent = activeUsers;
+            document.getElementById('totalImages').textContent = totalImages;
+            document.getElementById('lastUpdate').textContent = lastUpdate;
+        }
+
+        async function viewUser(userId) {
+            try {
+                const response = await fetch(`/api/user/${userId}`);
+                const user = await response.json();
+                
+                if (user.error) {
+                    alert(`Error: ${user.error}`);
+                    return;
+                }
+                
+                const userInfo = `
+User Details:
+ID: ${user.id}
+Username: ${user.username}
+Email: ${user.email}
+Image Path: ${user.image_path || 'N/A'}
+Image Status: ${user.image_exists ? 'Available' : 'Missing'}
+Created At: ${user.created_at}
+                `;
+                
+                alert(userInfo);
+                
+            } catch (error) {
+                alert(`Error loading user details: ${error.message}`);
+            }
+        }
+
+        async function deleteUser(userId, username) {
+            if (!confirm(`Are you sure you want to delete user "${username}" (ID: ${userId})?\n\nThis action cannot be undone!`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/user/${userId}`, {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                
+                if (result.error) {
+                    alert(`Error: ${result.error}`);
+                    return;
+                }
+                
+                // Show success message
+                document.getElementById('usersTable').innerHTML = 
+                    `<div class="success">${result.message}</div>`;
+                
+                // Reload data after a short delay
+                setTimeout(() => {
+                    loadUsersData();
+                }, 2000);
+                
+            } catch (error) {
+                alert(`Error deleting user: ${error.message}`);
+            }
+        }
+    </script>
+</body>
+</html>

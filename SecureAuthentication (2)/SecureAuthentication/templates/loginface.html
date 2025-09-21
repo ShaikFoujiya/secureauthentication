@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Face Authentication Login</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Roboto', sans-serif;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      height: 100vh;
+      margin: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+      padding: 30px;
+      max-width: 400px;
+      width: 100%;
+      text-align: center;
+    }
+    h2 {
+      margin-bottom: 20px;
+      color: #333;
+    }
+    video {
+      width: 220px;
+      height: 220px;
+      border-radius: 50%;
+      border: 4px solid #4CAF50;
+      margin-bottom: 20px;
+      object-fit: cover;
+    }
+    button {
+      width: 100%;
+      padding: 12px;
+      margin-top: 10px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      background: #007BFF;
+      color: #fff;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    .status {
+      margin-top: 15px;
+      font-size: 14px;
+      color: #555;
+    }
+    .status.error { color: #e74c3c; }
+    .status.success { color: #27ae60; }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <h2>Face Verification</h2>
+  <p style="color: #666; margin-bottom: 20px;">Please verify your identity with face recognition</p>
+  <video id="video" autoplay muted></video>
+  <canvas id="canvas" width="220" height="220" style="display:none;"></canvas>
+  <button id="faceLoginBtn">Verify Face</button>
+  <button id="retryBtn" style="display:none; background: #28a745; margin-top: 10px;">Retry Camera</button>
+  <div id="status" class="status">Initializing camera...</div>
+  <div style="margin-top: 15px;">
+    <a href="/" style="color: #007BFF; text-decoration: none;">← Back to Login</a>
+  </div>
+</div>
+
+<script>
+  const video = document.getElementById('video');
+  const canvas = document.getElementById('canvas');
+  const faceLoginBtn = document.getElementById('faceLoginBtn');
+  const retryBtn = document.getElementById('retryBtn');
+  const statusDiv = document.getElementById('status');
+
+  // Start webcam with better error handling
+  async function startCamera() {
+    try {
+      statusDiv.textContent = "Initializing camera...";
+      statusDiv.className = "status";
+      
+      // Try different camera constraints
+      const constraints = [
+        { video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' } },
+        { video: true },
+        { video: { facingMode: 'user' } }
+      ];
+
+      let stream = null;
+      for (let i = 0; i < constraints.length; i++) {
+        try {
+          console.log(`Trying camera constraint ${i + 1}:`, constraints[i]);
+          stream = await navigator.mediaDevices.getUserMedia(constraints[i]);
+          break;
+        } catch (err) {
+          console.warn(`Camera constraint ${i + 1} failed:`, err);
+          if (i === constraints.length - 1) throw err;
+        }
+      }
+
+      video.srcObject = stream;
+      statusDiv.textContent = "Camera ready! Position your face in the camera view.";
+      statusDiv.className = "status success";
+      
+    } catch (err) {
+      console.error("Camera error:", err);
+      let errorMessage = "Camera not available. ";
+      
+      if (err.name === 'NotAllowedError') {
+        errorMessage += "Please allow camera access in your browser settings.";
+      } else if (err.name === 'NotFoundError') {
+        errorMessage += "No camera found. Please connect a camera.";
+      } else if (err.name === 'NotReadableError') {
+        errorMessage += "Camera is being used by another application.";
+      } else {
+        errorMessage += "Please check your camera permissions.";
+      }
+      
+      statusDiv.textContent = errorMessage;
+      statusDiv.className = "status error";
+      faceLoginBtn.disabled = true;
+      retryBtn.style.display = "block";
+    }
+  }
+  
+  // Retry button functionality
+  retryBtn.onclick = function() {
+    statusDiv.textContent = "Retrying camera access...";
+    statusDiv.className = "status";
+    retryBtn.style.display = "none";
+    faceLoginBtn.disabled = false;
+    startCamera();
+  };
+  
+  // Start camera when page loads
+  startCamera();
+
+  // Get username from URL parameters ONLY
+  function getUsername() {
+    const urlParams = new URLSearchParams(window.location.search);
+    let username = urlParams.get('username');
+    
+    console.log("=== USERNAME EXTRACTION ===");
+    console.log("Current URL:", window.location.href);
+    console.log("URL search params:", window.location.search);
+    console.log("Username from URL:", username);
+    console.log("Username type:", typeof username);
+    console.log("Username length:", username ? username.length : 0);
+    
+    if (!username) {
+      console.error("No username found in URL parameters!");
+      statusDiv.textContent = "Username is required in URL. Please go back to login page.";
+      statusDiv.className = "status error";
+      return null;
+    }
+    
+    const finalUsername = username.trim();
+    console.log("Final username after trim:", finalUsername);
+    console.log("Final username length:", finalUsername.length);
+    console.log("===========================");
+    return finalUsername;
+  }
+
+  // Face login
+  faceLoginBtn.onclick = async () => {
+    // Get username
+    const username = getUsername();
+    if (!username) return;
+
+    // Check if camera is ready
+    if (video.readyState < 2) {
+      statusDiv.textContent = "Camera is still loading. Please wait...";
+      statusDiv.className = "status error";
+      return;
+    }
+
+    // Capture high quality image
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
+
+    // Validate image quality
+    if (dataUrl.length < 10000) {
+      statusDiv.textContent = "Image quality too low. Please ensure good lighting.";
+      statusDiv.className = "status error";
+      return;
+    }
+
+    faceLoginBtn.disabled = true;
+    faceLoginBtn.textContent = "Verifying Face...";
+    statusDiv.textContent = "Processing face recognition...";
+    statusDiv.className = "status";
+
+    try {
+      const formData = new FormData();
+      formData.append("face_image_base64", dataUrl);
+      formData.append("username", username);
+
+      console.log("=== SENDING FACE VERIFICATION ===");
+      console.log("Username being sent:", username);
+      console.log("FormData username value:", formData.get("username"));
+      console.log("Current URL:", window.location.href);
+      console.log("FormData entries:");
+      for (let [key, value] of formData.entries()) {
+        if (key === 'face_image_base64') {
+          console.log(`  ${key}: [IMAGE DATA - ${value.length} chars]`);
+        } else {
+          console.log(`  ${key}: "${value}"`);
+        }
+      }
+      console.log("=================================");
+      
+      const res = await fetch("/login_face", { method: "POST", body: formData });
+      const data = await res.json();
+
+      console.log("Face verification response:", data);
+
+      if (data.status === "success") {
+        statusDiv.textContent = "Face verified successfully! Redirecting to dashboard...";
+        statusDiv.className = "status success";
+        setTimeout(() => window.location.href = "/dashboard", 1500);
+      } else {
+        // Show alert message when face doesn't match
+        alert(data.message || "Face not recognized. Please try again or contact support.");
+        statusDiv.textContent = data.message || "Face not recognized. Please try again.";
+        statusDiv.className = "status error";
+      }
+    } catch (err) {
+      console.error("Face verification error:", err);
+      statusDiv.textContent = "Error during face verification. Please try again.";
+      statusDiv.className = "status error";
+    } finally {
+      faceLoginBtn.disabled = false;
+      faceLoginBtn.textContent = "Verify Face";
+    }
+  };
+</script>
+
+</body>
+</html>

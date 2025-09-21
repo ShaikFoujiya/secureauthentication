@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Face Authentication Register</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Roboto', sans-serif; }
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: linear-gradient(135deg, #6a11cb, #2575fc);
+        }
+        .login-card {
+            display: flex;
+            background: #fff;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            overflow: hidden;
+            max-width: 700px;
+            width: 90%;
+        }
+        .left-side {
+            background: #f0f0f0;
+            width: 45%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 30px;
+            position: relative;
+        }
+        .left-side video {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 4px solid #4CAF50;
+            margin-bottom: 20px;
+        }
+        .face-btn {
+            background-color: #007BFF;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+        .face-btn:hover:not(:disabled) {
+            background-color: #0056b3;
+            transform: translateY(-2px);
+        }
+        .face-btn:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .retry-btn {
+            background-color: #28a745;
+            color: #fff;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 10px;
+            transition: all 0.3s ease;
+        }
+        .retry-btn:hover {
+            background-color: #218838;
+        }
+        .camera-status {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 14px;
+            color: #666;
+        }
+        .camera-status.error {
+            color: #dc3545;
+        }
+        .camera-status.success {
+            color: #28a745;
+        }
+        .capture-status {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 14px;
+            color: #28a745;
+            font-weight: 500;
+        }
+        .right-side {
+            width: 55%;
+            padding: 50px 30px;
+        }
+        .right-side h2 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-weight: 500;
+        }
+        .right-side input {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+        }
+        .btn-register {
+            width: 100%;
+            padding: 12px;
+            background: #4CAF50;
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+        .register-link {
+            text-align: center;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="login-card">
+    <div class="left-side">
+        <video id="video" autoplay muted></video>
+        <button class="face-btn" id="captureBtn" type="button">Capture Face</button>
+        <div class="camera-status" id="cameraStatus">Initializing camera...</div>
+        <div style="font-size: 12px; color: #666; text-align: center; margin-top: 5px;">
+            Note: Camera access requires HTTPS or localhost
+        </div>
+        <button class="retry-btn" id="retryBtn" type="button" style="display:none;">Retry Camera</button>
+        <button class="retry-btn" id="permissionBtn" type="button" style="display:none; background-color: #007BFF;">Request Camera Permission</button>
+        <div class="capture-status" id="captureStatus" style="display:none;">✅ Face captured successfully!</div>
+        <canvas id="canvas" width="150" height="150" style="display:none;"></canvas>
+    </div>
+    <div class="right-side">
+        <h2>Register</h2>
+        <form id="registrationForm" enctype="multipart/form-data">
+            <input type="text" name="username" placeholder="Enter Username" required>
+            <input type="email" name="email" placeholder="Enter Email" required>
+            <input type="password" name="password" placeholder="Enter Password" required>
+            <input type="hidden" name="face_image_base64" id="face_image_base64">
+            <button type="submit" class="btn-register">Register</button>
+        </form>
+        <div class="register-link">
+            Already have an account? <a href="/">Login</a>
+        </div>
+    </div>
+</div>
+
+<script>
+const video = document.getElementById('video');
+const canvas = document.getElementById('canvas');
+const captureBtn = document.getElementById('captureBtn');
+const faceInput = document.getElementById('face_image_base64');
+const cameraStatus = document.getElementById('cameraStatus');
+const retryBtn = document.getElementById('retryBtn');
+const permissionBtn = document.getElementById('permissionBtn');
+const captureStatus = document.getElementById('captureStatus');
+
+// Check if getUserMedia is supported
+if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    console.error('getUserMedia not supported');
+    cameraStatus.textContent = 'Camera not supported in this browser';
+    cameraStatus.className = 'camera-status error';
+    captureBtn.disabled = true;
+    captureBtn.textContent = 'Camera Not Supported';
+} else {
+    // Start webcam with multiple fallback options
+    const startCamera = async () => {
+        const constraints = [
+            // Try with specific constraints first
+            { 
+                video: { 
+                    width: { ideal: 640 },
+                    height: { ideal: 480 },
+                    facingMode: 'user'
+                } 
+            },
+            // Fallback to basic video
+            { video: true },
+            // Last resort - any video device
+            { video: { facingMode: 'user' } }
+        ];
+
+        for (let i = 0; i < constraints.length; i++) {
+            try {
+                console.log(`Trying camera constraint ${i + 1}:`, constraints[i]);
+                cameraStatus.textContent = `Trying camera setup ${i + 1}...`;
+                const stream = await navigator.mediaDevices.getUserMedia(constraints[i]);
+                video.srcObject = stream;
+                console.log('Webcam started successfully with constraint:', constraints[i]);
+                cameraStatus.textContent = 'Camera ready!';
+                cameraStatus.className = 'camera-status success';
+                retryBtn.style.display = 'none';
+                permissionBtn.style.display = 'none';
+                return;
+            } catch (err) {
+                console.warn(`Camera constraint ${i + 1} failed:`, err);
+                if (i === constraints.length - 1) {
+                    // All constraints failed
+                    throw err;
+                }
+            }
+        }
+    };
+
+    startCamera()
+    .catch(err => { 
+        console.error('All camera attempts failed:', err);
+        console.error('Error name:', err.name);
+        console.error('Error message:', err.message);
+        
+        let errorMessage = 'Could not access webcam. ';
+        
+        if (err.name === 'NotAllowedError') {
+            errorMessage += 'Please allow camera access in your browser settings.';
+            permissionBtn.style.display = 'block';
+        } else if (err.name === 'NotFoundError') {
+            errorMessage += 'No camera found. Please connect a camera.';
+            retryBtn.style.display = 'block';
+        } else if (err.name === 'NotReadableError') {
+            errorMessage += 'Camera is being used by another application.';
+            retryBtn.style.display = 'block';
+        } else if (err.name === 'OverconstrainedError') {
+            errorMessage += 'Camera constraints could not be satisfied.';
+            retryBtn.style.display = 'block';
+        } else {
+            errorMessage += `Error: ${err.name} - ${err.message}`;
+            retryBtn.style.display = 'block';
+        }
+        
+        cameraStatus.textContent = errorMessage;
+        cameraStatus.className = 'camera-status error';
+        captureBtn.disabled = true;
+        captureBtn.textContent = 'Camera Not Available';
+    });
+
+    // Retry button functionality
+    retryBtn.onclick = function() {
+        cameraStatus.textContent = 'Retrying camera access...';
+        cameraStatus.className = 'camera-status';
+        retryBtn.style.display = 'none';
+        permissionBtn.style.display = 'none';
+        startCamera()
+        .catch(err => {
+            console.error('Retry failed:', err);
+            let errorMessage = 'Retry failed. ';
+            if (err.name === 'NotAllowedError') {
+                errorMessage += 'Please allow camera access in your browser settings.';
+                permissionBtn.style.display = 'block';
+            } else {
+                errorMessage += 'Please check your camera and try again.';
+                retryBtn.style.display = 'block';
+            }
+            cameraStatus.textContent = errorMessage;
+            cameraStatus.className = 'camera-status error';
+        });
+    };
+
+    // Permission button functionality
+    permissionBtn.onclick = function() {
+        cameraStatus.textContent = 'Requesting camera permission...';
+        cameraStatus.className = 'camera-status';
+        permissionBtn.style.display = 'none';
+        retryBtn.style.display = 'none';
+        
+        // Try to request permission explicitly
+        navigator.mediaDevices.getUserMedia({ video: true })
+        .then(stream => {
+            // Permission granted, now start the full camera setup
+            video.srcObject = stream;
+            cameraStatus.textContent = 'Permission granted! Setting up camera...';
+            cameraStatus.className = 'camera-status success';
+            captureBtn.disabled = false;
+            captureBtn.textContent = 'Capture Face';
+        })
+        .catch(err => {
+            console.error('Permission request failed:', err);
+            let errorMessage = 'Permission denied. ';
+            if (err.name === 'NotAllowedError') {
+                errorMessage += 'Please click the camera icon in your browser address bar and allow camera access.';
+            } else {
+                errorMessage += 'Please check your camera settings.';
+            }
+            cameraStatus.textContent = errorMessage;
+            cameraStatus.className = 'camera-status error';
+            permissionBtn.style.display = 'block';
+        });
+    };
+}
+
+// Capture face image
+captureBtn.onclick = function() {
+    if (!video.srcObject) {
+        alert('Camera not available. Please check camera access.');
+        return;
+    }
+    
+    try {
+        canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL('image/jpeg');
+        faceInput.value = dataUrl;
+        
+        // Show success message
+        captureStatus.style.display = 'block';
+        captureBtn.textContent = 'Recapture Face';
+        captureBtn.style.backgroundColor = '#28a745';
+        
+        console.log('Face captured successfully');
+    } catch (err) {
+        console.error('Face capture error:', err);
+        alert('Failed to capture face. Please try again.');
+    }
+};
+
+// Submit registration
+document.getElementById('registrationForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const faceInput = document.getElementById('face_image_base64');
+    if (!faceInput.value) {
+        alert('Please capture your face before registering.');
+        return;
+    }
+    
+    // Disable submit button to prevent multiple submissions
+    const submitBtn = this.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Registering...';
+    
+    try {
+        const formData = new FormData(this);
+        const res = await fetch('/register', { method: 'POST', body: formData });
+        const data = await res.json();
+        
+        if (data.status === "success") {
+            alert('Registration successful! Redirecting to login...');
+            window.location.href = "/";
+        } else {
+            alert(data.message || 'Registration failed. Please try again.');
+        }
+    } catch (err) {
+        console.error('Registration error:', err);
+        alert('An error occurred during registration. Please try again.');
+    } finally {
+        // Re-enable submit button
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+    }
+});
+</script>
+</body>
+</html>

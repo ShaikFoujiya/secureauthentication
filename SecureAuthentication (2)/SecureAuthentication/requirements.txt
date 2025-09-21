@@ -1,0 +1,7 @@
+Flask==2.3.3
+flask-cors
+flask-sqlalchemy
+opencv-python
+deepface
+numpy
+pillow
